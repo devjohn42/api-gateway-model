@@ -1,8 +1,10 @@
-import { Module } from '@nestjs/common'
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { ThrottlerModule } from '@nestjs/throttler'
 import { AppController } from './app.controller'
 import { AppService } from './app.service'
+import { LoggingMiddleware } from './middlewares/logging/logging.middleware'
+import { MiddlewaresModule } from './middlewares/middlewares.module'
 import { ProxyModule } from './proxy/proxy.module'
 
 @Module({
@@ -16,9 +18,14 @@ import { ProxyModule } from './proxy/proxy.module'
 				limit: 100 // 100 requests per minute
 			}
 		]),
-		ProxyModule
+		ProxyModule,
+		MiddlewaresModule
 	],
 	controllers: [AppController],
 	providers: [AppService]
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+	configure(consumer: MiddlewareConsumer) {
+		consumer.apply(LoggingMiddleware).forRoutes('*')
+	}
+}
