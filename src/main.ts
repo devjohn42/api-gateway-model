@@ -4,14 +4,54 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import helmet from 'helmet'
 import { AppModule } from './app.module'
 
+const CORS_LIFETIME = 86400
+
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule)
 
-	app.use(helmet())
+	app.use(
+		helmet({
+			contentSecurityPolicy: {
+				directives: {
+					defaultSrc: ["'self'"],
+					scriptSrc: ["'self'"],
+					styleSrc: ["'self'", "'unsafe-inline'"],
+					imgSrc: ["'self'", "'data:'", "'https:'"]
+				}
+			},
+			crossOriginEmbedderPolicy: false,
+			hsts: {
+				maxAge: 31536000,
+				inlcudeSubdomains: true,
+				preload: true
+			}
+		})
+	)
+
 	app.enableCors({
-		origin: process.env.CORS_ORIGIN || '*',
+		origin: (origin, callback) => {
+			if (!origin) return callback(null, true)
+
+			const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || ['*']
+
+			if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+				callback(null, true)
+			} else {
+				callback(new Error('Not allowed by CORS'))
+			}
+		},
 		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-		allowedHeaders: ['Content-Type', 'Authorization']
+		allowedHeaders: [
+			'Content-Type',
+			'Authorization',
+			'X-Requested-With',
+			'Accept',
+			'Origin',
+			'Access-Control-Request-Method',
+			'Access-Control-Request-Headers'
+		],
+		credentials: true,
+		maxAge: CORS_LIFETIME
 	})
 
 	app.useGlobalPipes(
@@ -30,12 +70,12 @@ async function bootstrap() {
 		.build()
 
 	const document = SwaggerModule.createDocument(app, config)
-	SwaggerModule.setup('api', app, document)
+	SwaggerModule.setup('docs', app, document)
 
 	const port = process.env.PORT || 3000
 	await app.listen(port)
 
 	console.log(`🚀 API Gateway running on port ${port}`)
-	console.log(`📚 Swagger documentation <http://localhost:${port}/api>`)
+	console.log(`📚 Swagger documentation <http://localhost:${port}/docs>`)
 }
 bootstrap()
