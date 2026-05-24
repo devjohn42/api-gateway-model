@@ -22,7 +22,7 @@ async function bootstrap() {
 			crossOriginEmbedderPolicy: false,
 			hsts: {
 				maxAge: 31536000,
-				inlcudeSubdomains: true,
+				includeSubDomains: true,
 				preload: true
 			}
 		})
