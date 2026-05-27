@@ -17,7 +17,7 @@ import { ProxyModule } from './proxy/proxy.module'
 			{
 				name: 'short',
 				ttl: 60000, // 1 minute
-				limit: 10 // 10 requests per second
+				limit: 10 // 10 requests per minute
 			},
 			{
 				name: 'medium',

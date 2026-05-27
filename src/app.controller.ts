@@ -1,5 +1,4 @@
 import { Controller, Get } from '@nestjs/common'
-import { timestamp } from 'rxjs'
 import { ProxyService } from '@/proxy/service/proxy.service'
 import { AppService } from './app.service'
 
