@@ -105,7 +105,7 @@ async function bootstrap() {
 		.addTag('Products', 'Endpoints para catálogo de produtos')
 		.addTag('Checkout', 'Endpoints para carrinho e pedidos')
 		.addTag('Payments', 'Endpoints para processamento de pagametos')
-		.addTag('Health', 'Endpoints para monitoramento de saúde da API')
+		.addTag('Health', 'Endpoints para monitoramento de saúde')
 		.build()
 
 	const document = SwaggerModule.createDocument(app, config)
