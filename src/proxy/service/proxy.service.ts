@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
 import { firstValueFrom } from 'rxjs'
+import { CircuitBreakerService } from '@/common/circuit-breaker/circuit-breaker.service'
 import { serviceConfig } from '@/config/gateway.config'
 
 interface UserInfo {
@@ -14,7 +15,10 @@ type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete'
 export class ProxyService {
 	private readonly logger = new Logger(ProxyService.name)
 
-	constructor(private readonly httpService: HttpService) {}
+	constructor(
+		private readonly httpService: HttpService,
+		private readonly circuitBreakerService: CircuitBreakerService
+	) {}
 
 	async proxyRequest(
 		serviceName: keyof typeof serviceConfig,
@@ -29,29 +33,33 @@ export class ProxyService {
 
 		this.logger.log(`Proxying ${method} request to ${serviceName}: ${url}`)
 
-		try {
-			const enhancedHeaders = {
-				...headers,
-				'x-user-id': userInfo?.userId,
-				'x-user-email': userInfo?.email,
-				'x-user-role': userInfo?.role
+		return this.circuitBreakerService.executeWithCircuitBreaker(
+			async () => {
+				const enhancedHeaders = {
+					...headers,
+					'x-user-id': userInfo?.userId,
+					'x-user-email': userInfo?.email,
+					'x-user-role': userInfo?.role
+				}
+
+				const reponse = await firstValueFrom(
+					this.httpService.request({
+						method: method.toLowerCase() as HttpMethod,
+						url,
+						data,
+						headers: enhancedHeaders,
+						timeout: service.timeout
+					})
+				)
+
+				return reponse
+			},
+			`proxy-${serviceName}`,
+			{ failureThreshold: 3, timeout: 30000, resetTimeout: 30000 },
+			() => {
+				throw new Error(`${serviceName} service is temporarily unavailable`)
 			}
-
-			const reponse = await firstValueFrom(
-				this.httpService.request({
-					method: method.toLowerCase() as HttpMethod,
-					url,
-					data,
-					headers: enhancedHeaders,
-					timeout: service.timeout
-				})
-			)
-
-			return reponse
-		} catch (error) {
-			this.logger.error(`Error proxying ${method} request to ${serviceName}: ${url}`)
-			throw error
-		}
+		)
 	}
 
 	async getServiceHealth(serviceName: keyof typeof serviceConfig) {
@@ -63,7 +71,7 @@ export class ProxyService {
 				})
 			)
 			return { status: 'healthy', data: response.data }
-		} catch (error) {
+		} catch (error: any) {
 			return { status: 'unhealthy', error: error.message }
 		}
 	}

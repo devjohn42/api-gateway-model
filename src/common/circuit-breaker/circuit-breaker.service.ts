@@ -18,8 +18,8 @@ export class CircuitBreakerService {
 	async executeWithCircuitBreaker<T>(
 		operation: () => Promise<T>,
 		key: string,
-		fallback?: () => Promise<T>,
-		options: CircuitBreakerOptions = this.defaultOptions
+		options: CircuitBreakerOptions = this.defaultOptions,
+		fallback?: () => Promise<T>
 	): Promise<T> {
 		const config = { ...this.defaultOptions, ...options }
 		const circuit = this.getOrCreateCircuit(key, config)
@@ -41,7 +41,7 @@ export class CircuitBreakerService {
 			const result = await operation()
 			this.onSuccess(circuit, key)
 			return result
-		} catch (error) {
+		} catch (error: any) {
 			this.onFailure(circuit, key, config)
 			this.logger.warn(`Circuit breaker failure for ${key}:`, error.message)
 			if (fallback) {
