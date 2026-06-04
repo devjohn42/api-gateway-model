@@ -2,6 +2,8 @@ import { HttpService } from '@nestjs/axios'
 import { Injectable, Logger } from '@nestjs/common'
 import { firstValueFrom } from 'rxjs'
 import { CircuitBreakerService } from '@/common/circuit-breaker/circuit-breaker.service'
+import { CacheFallbackService } from '@/common/fallback/cache-fallback'
+import { DefaultFallbackService } from '@/common/fallback/default-fallback'
 import { serviceConfig } from '@/config/gateway.config'
 
 interface UserInfo {
@@ -17,7 +19,9 @@ export class ProxyService {
 
 	constructor(
 		private readonly httpService: HttpService,
-		private readonly circuitBreakerService: CircuitBreakerService
+		private readonly circuitBreakerService: CircuitBreakerService,
+		private readonly cacheFallBackService: CacheFallbackService,
+		private readonly defaultFallbackService: DefaultFallbackService
 	) {}
 
 	async proxyRequest(
@@ -32,6 +36,8 @@ export class ProxyService {
 		const url = `${service.url}${path}`
 
 		this.logger.log(`Proxying ${method} request to ${serviceName}: ${url}`)
+
+		const fallback = this.createServiceFallback(serviceName, method, path)
 
 		return this.circuitBreakerService.executeWithCircuitBreaker(
 			async () => {
@@ -52,13 +58,15 @@ export class ProxyService {
 					})
 				)
 
-				return reponse
+				if (method.toLowerCase() === 'get') {
+					this.cacheFallBackService.setCachedData(`${serviceName}-${path}`, reponse.data)
+				}
+
+				return reponse.data
 			},
 			`proxy-${serviceName}`,
 			{ failureThreshold: 3, timeout: 30000, resetTimeout: 30000 },
-			() => {
-				throw new Error(`${serviceName} service is temporarily unavailable`)
-			}
+			fallback
 		)
 	}
 
@@ -73,6 +81,47 @@ export class ProxyService {
 			return { status: 'healthy', data: response.data }
 		} catch (error: any) {
 			return { status: 'unhealthy', error: error.message }
+		}
+	}
+
+	private createServiceFallback(serviceName: string, method: string, path: string) {
+		switch (serviceName) {
+			case 'users':
+				if (path.includes('/auth/login')) {
+					return this.defaultFallbackService.createDefaultFallback(
+						'users',
+						'Authentication service unavailable'
+					)
+				}
+				return this.defaultFallbackService.createDefaultFallback(
+					'users',
+					'User service unavailable'
+				)
+			case 'products':
+				if (method.toLowerCase() === 'get') {
+					return this.cacheFallBackService.createCacheFallback(`products-${path}`, {
+						products: [],
+						total: 0,
+						page: 1,
+						limit: 10
+					})
+				}
+
+				return this.defaultFallbackService.createDefaultFallback(
+					'products',
+					'Product service unavailable'
+				)
+			case 'checkout':
+			case 'payments':
+				return this.cacheFallBackService.createCacheFallback(
+					serviceName,
+					`${serviceName} service unavailable`
+				)
+			default:
+				return this.defaultFallbackService.createDefaultFallback(
+					serviceName,
+					'Service unavailable'
+				)
 		}
 	}
 }

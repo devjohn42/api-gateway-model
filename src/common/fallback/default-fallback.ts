@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common'
 
 @Injectable()
-export class DefatulFallbackService {
-	private readonly logger = new Logger(DefatulFallbackService.name)
+export class DefaultFallbackService {
+	private readonly logger = new Logger(DefaultFallbackService.name)
 
 	createDefaultFallback<T>(defaultResponse: T, serviceName: string): () => Promise<T> {
 		return async (): Promise<T> => {
