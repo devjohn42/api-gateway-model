@@ -51,7 +51,7 @@ export class HealthCheckService {
 
 			this.healthCache.set(serviceName, serviceHealth)
 			return serviceHealth
-		} catch (error) {
+		} catch (error: any) {
 			const responseTime = Date.now() - startTime
 			const serviceHealth: ServiceHealth = {
 				name: serviceName,
