@@ -6,6 +6,7 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { AuthModule } from './auth/auth.module'
 import { CustomThrottlerGuard } from './guards/throttler.guard'
+import { HealthModule } from './health/health.module'
 import { LoggingMiddleware } from './middlewares/logging/logging.middleware'
 import { MiddlewaresModule } from './middlewares/middlewares.module'
 import { ProxyModule } from './proxy/proxy.module'
@@ -38,7 +39,8 @@ import { ProxyModule } from './proxy/proxy.module'
 		}),
 		ProxyModule,
 		MiddlewaresModule,
-		AuthModule
+		AuthModule,
+		HealthModule
 	],
 	controllers: [AppController],
 	providers: [
