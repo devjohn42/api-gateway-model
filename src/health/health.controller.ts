@@ -1,11 +1,12 @@
 import { Controller, Get, Param } from '@nestjs/common'
 import { ApiOperation, ApiResponse } from '@nestjs/swagger'
 import { HealthCheckService } from '@/common/health/health-check.service'
+import { HealthService } from './health.service'
 
 @Controller('health')
 export class HealthController {
 	constructor(
-		private readonly healthService: HealthCheckService,
+		private readonly healthService: HealthService,
 		private readonly healthCheckService: HealthCheckService
 	) {}
 
